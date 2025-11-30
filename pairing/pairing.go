@@ -23,8 +23,8 @@ type PairedDevice struct {
 	Type  device.DeviceType
 }
 
-// Run executes the interactive pairing flow
-func Run(name string, timeout int) error {
+// DiscoverAndPairDevices executes the interactive pairing flow
+func DiscoverAndPairDevices(name string, timeout int) error {
 	// Validate name according to HomeWizard API requirements
 	namePattern := regexp.MustCompile(`^[a-zA-Z0-9\-_/\\# ]{1,40}$`)
 	if !namePattern.MatchString(name) {
@@ -56,6 +56,47 @@ func Run(name string, timeout int) error {
 
 	// Print configuration
 	printHomeWizardMultiConfig(paired)
+
+	return nil
+}
+
+// PairSingleDevice pairs a specific device without discovery
+func PairSingleDevice(host, name string) error {
+	// Validate name according to HomeWizard API requirements
+	namePattern := regexp.MustCompile(`^[a-zA-Z0-9\-_/\\# ]{1,40}$`)
+	if !namePattern.MatchString(name) {
+		return fmt.Errorf("invalid name: must be 1-40 characters (a-z, A-Z, 0-9, -, _, \\, /, #, spaces)")
+	}
+
+	fmt.Println("HomeWizard Device Pairing")
+	fmt.Println("=========================")
+	fmt.Println()
+	fmt.Printf("Device: %s\n", host)
+	fmt.Println()
+	fmt.Println("Press the button on your device NOW!")
+	fmt.Println()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	// Pair the device
+	token, err := pairDeviceWithContext(ctx, host, name, func(attempt int) {
+		fmt.Printf("\rWaiting for button press (attempt %d/36)...", attempt)
+	})
+
+	if err != nil {
+		fmt.Println()
+		return fmt.Errorf("pairing failed: %w", err)
+	}
+
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("Pairing Successful!")
+	fmt.Println("========================================")
+	fmt.Println()
+	fmt.Printf("Token: %s\n", token)
+	fmt.Println()
 
 	return nil
 }
