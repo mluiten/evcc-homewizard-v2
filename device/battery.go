@@ -77,3 +77,8 @@ func (d *BatteryDevice) GetMeasurement() (BatteryMeasurement, error) {
 	}
 	return m, nil
 }
+
+// DefaultCapacity returns the default battery capacity for HWE-BAT
+func (d *BatteryDevice) DefaultCapacity() float64 {
+	return DefaultBatteryCapacity
+}

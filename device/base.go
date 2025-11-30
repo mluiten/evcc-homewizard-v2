@@ -1,6 +1,7 @@
 package device
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/evcc-io/evcc/util"
@@ -15,6 +16,14 @@ const (
 	DeviceTypeP1Meter  DeviceType = "p1meter"
 	DeviceTypeKWHMeter DeviceType = "kwhmeter"
 	DeviceTypeBattery  DeviceType = "battery"
+)
+
+// Default configuration values
+const (
+	DefaultTimeout         = 30 * time.Second
+	DefaultMaxCharge       = 800.0 // W - Default charge limit for HWE-BAT
+	DefaultMaxDischarge    = 800.0 // W - Default discharge limit for HWE-BAT
+	DefaultBatteryCapacity = 2.47  // kWh - HWE-BAT capacity
 )
 
 // deviceBase contains common functionality for all HomeWizard devices
@@ -63,6 +72,24 @@ func (d *deviceBase) Host() string {
 // Start initiates the WebSocket connection
 func (d *deviceBase) Start(errC chan error) {
 	d.conn.Start(errC)
+}
+
+// StartAndWait initiates the WebSocket connection and waits for it to succeed or timeout
+func (d *deviceBase) StartAndWait(timeout time.Duration) error {
+	errC := make(chan error, 1)
+	d.Start(errC)
+
+	select {
+	case err := <-errC:
+		if err != nil {
+			d.Stop()
+			return fmt.Errorf("connecting to device: %w", err)
+		}
+		return nil
+	case <-time.After(timeout):
+		d.Stop()
+		return fmt.Errorf("connection timeout")
+	}
 }
 
 // Stop gracefully closes the connection
