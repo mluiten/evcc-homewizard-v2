@@ -31,14 +31,14 @@ import (
     "fmt"
     "time"
 
-    hw "github.com/mluiten/evcc-homewizard-v2"
+    "github.com/mluiten/evcc-homewizard-v2/discovery"
 )
 
 func main() {
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
-    err := hw.DiscoverDevices(ctx, func(device hw.DiscoveredDevice) {
+    err := discovery.DiscoverDevices(ctx, func(device discovery.DiscoveredDevice) {
         fmt.Printf("Found: %s (%s) at %s:%d\n",
             device.Instance, device.Type, device.Host, device.Port)
     })
@@ -58,26 +58,17 @@ import (
     "fmt"
     "time"
 
-    hw "github.com/mluiten/evcc-homewizard-v2"
+    "github.com/mluiten/evcc-homewizard-v2/device"
 )
 
 func main() {
     // Create P1 device
-    p1 := hw.NewP1Device("192.168.1.10", "your-token-here", 30*time.Second)
-
-    // Start connection
-    errC := make(chan error, 1)
-    p1.Start(errC)
+    p1 := device.NewP1Device("192.168.1.10", "your-token-here", 30*time.Second)
     defer p1.Stop()
 
-    // Wait for connection
-    select {
-    case err := <-errC:
-        if err != nil {
-            panic(err)
-        }
-    case <-time.After(5 * time.Second):
-        panic("connection timeout")
+    // Start connection and wait (new helper method)
+    if err := p1.StartAndWait(5 * time.Second); err != nil {
+        panic(err)
     }
 
     // Get measurements
@@ -85,7 +76,7 @@ func main() {
     if err != nil {
         panic(err)
     }
-    fmt.Printf("Grid Power: %.1f W\n", meas.ActivePowerW)
+    fmt.Printf("Grid Power: %.1f W\n", meas.PowerW)
 
     // Get battery status
     batteries, err := p1.GetBatteries()
@@ -96,8 +87,7 @@ func main() {
     fmt.Printf("Battery Power: %.1f W\n", batteries.PowerW)
 
     // Set battery mode
-    err = p1.SetBatteryMode("zero")  // "zero", "to_full", or "standby"
-    if err != nil {
+    if err := p1.SetBatteryMode("zero"); err != nil {  // "zero", "to_full", or "standby"
         panic(err)
     }
 }
@@ -112,26 +102,17 @@ import (
     "fmt"
     "time"
 
-    hw "github.com/mluiten/evcc-homewizard-v2"
+    "github.com/mluiten/evcc-homewizard-v2/device"
 )
 
 func main() {
     // Create kWh device
-    kwh := hw.NewKWHDevice("192.168.1.11", "your-token-here", 30*time.Second)
-
-    // Start connection
-    errC := make(chan error, 1)
-    kwh.Start(errC)
+    kwh := device.NewKWHDevice("192.168.1.11", "your-token-here", 30*time.Second)
     defer kwh.Stop()
 
-    // Wait for connection
-    select {
-    case err := <-errC:
-        if err != nil {
-            panic(err)
-        }
-    case <-time.After(5 * time.Second):
-        panic("connection timeout")
+    // Start connection and wait
+    if err := kwh.StartAndWait(5 * time.Second); err != nil {
+        panic(err)
     }
 
     // Get measurements
@@ -154,26 +135,17 @@ import (
     "fmt"
     "time"
 
-    hw "github.com/mluiten/evcc-homewizard-v2"
+    "github.com/mluiten/evcc-homewizard-v2/device"
 )
 
 func main() {
     // Create battery device
-    bat := hw.NewBatteryDevice("192.168.1.12", "your-token-here", 30*time.Second)
-
-    // Start connection
-    errC := make(chan error, 1)
-    bat.Start(errC)
+    bat := device.NewBatteryDevice("192.168.1.12", "your-token-here", 30*time.Second)
     defer bat.Stop()
 
-    // Wait for connection
-    select {
-    case err := <-errC:
-        if err != nil {
-            panic(err)
-        }
-    case <-time.After(5 * time.Second):
-        panic("connection timeout")
+    // Start connection and wait
+    if err := bat.StartAndWait(5 * time.Second); err != nil {
+        panic(err)
     }
 
     // Get measurements
@@ -183,13 +155,15 @@ func main() {
     }
     fmt.Printf("State of Charge: %.1f%%\n", meas.StateOfChargePct)
     fmt.Printf("Power: %.1f W\n", meas.PowerW)
-    fmt.Printf("Charge Cycles: %d\n", meas.ChargeCycleCount)
+    fmt.Printf("Charge Cycles: %d\n", meas.Cycles)
 }
 ```
 
 ## API Reference
 
-### Device Types
+### Package: `device`
+
+#### Device Types and Constants
 
 ```go
 const (
@@ -197,38 +171,49 @@ const (
     DeviceTypeKWHMeter DeviceType = "kwhmeter"
     DeviceTypeBattery  DeviceType = "battery"
 )
+
+const (
+    DefaultTimeout         = 30 * time.Second
+    DefaultMaxCharge       = 800.0 // W
+    DefaultMaxDischarge    = 800.0 // W
+    DefaultBatteryCapacity = 2.47  // kWh
+)
 ```
 
-### P1 Device
+#### P1 Device
 
 ```go
 func NewP1Device(host, token string, timeout time.Duration) *P1Device
 func (d *P1Device) Start(errC chan error)
+func (d *P1Device) StartAndWait(timeout time.Duration) error  // Convenience method
 func (d *P1Device) Stop()
-func (d *P1Device) GetMeasurement() (*P1Measurement, error)
-func (d *P1Device) GetBatteries() (*BatteriesData, error)
+func (d *P1Device) GetMeasurement() (P1Measurement, error)
+func (d *P1Device) GetBatteries() (BatteriesData, error)
 func (d *P1Device) SetBatteryMode(mode string) error  // "zero", "to_full", "standby"
 ```
 
-### kWh Device
+#### kWh Device
 
 ```go
 func NewKWHDevice(host, token string, timeout time.Duration) *KWHDevice
 func (d *KWHDevice) Start(errC chan error)
+func (d *KWHDevice) StartAndWait(timeout time.Duration) error  // Convenience method
 func (d *KWHDevice) Stop()
-func (d *KWHDevice) GetMeasurement() (*KWHMeasurement, error)
+func (d *KWHDevice) GetMeasurement() (KWHMeasurement, error)
 ```
 
-### Battery Device
+#### Battery Device
 
 ```go
 func NewBatteryDevice(host, token string, timeout time.Duration) *BatteryDevice
 func (d *BatteryDevice) Start(errC chan error)
+func (d *BatteryDevice) StartAndWait(timeout time.Duration) error  // Convenience method
 func (d *BatteryDevice) Stop()
-func (d *BatteryDevice) GetMeasurement() (*BatteryMeasurement, error)
+func (d *BatteryDevice) GetMeasurement() (BatteryMeasurement, error)
+func (d *BatteryDevice) DefaultCapacity() float64
 ```
 
-### Discovery
+### Package: `discovery`
 
 ```go
 func DiscoverDevices(ctx context.Context, onDevice func(DiscoveredDevice)) error
@@ -237,8 +222,15 @@ type DiscoveredDevice struct {
     Instance string      // Device instance name
     Host     string      // IP address or hostname
     Port     int         // Port number (usually 443)
-    Type     DeviceType  // Device type
+    Type     device.DeviceType  // Device type
 }
+```
+
+### Package: `pairing`
+
+```go
+// Interactive pairing tool - used by evcc token command
+func Run(name string, timeout int) error
 ```
 
 ## Device Pairing
@@ -266,7 +258,7 @@ To obtain device tokens, use the `evcc token homewizard` command from the [evcc]
 
 - `github.com/coder/websocket` - WebSocket client
 - `github.com/libp2p/zeroconf/v2` - mDNS discovery
-- `github.com/evcc-io/evcc` - Utilities (temporary, will be removed)
+- `github.com/evcc-io/evcc` - Utilities (util.Logger, util.Monitor, request.Helper)
 
 ## License
 
