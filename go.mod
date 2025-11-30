@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/coder/websocket v1.8.14
-	github.com/evcc-io/evcc v0.0.0-20251130130017-d4999cd28cf2
+	github.com/evcc-io/evcc v0.0.0-20251126185350-2e3b380bdac0
 	github.com/libp2p/zeroconf/v2 v2.2.0
 )
 
@@ -35,6 +35,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.2 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/samber/lo v1.52.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
