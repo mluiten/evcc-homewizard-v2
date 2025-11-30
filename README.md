@@ -276,6 +276,38 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 Contributions welcome! Please open an issue or submit a pull request.
 
+## Development
+
+### Building and Testing
+
+```bash
+# Build all packages
+make build
+
+# Run tests with coverage
+make test
+
+# Format code
+make fmt
+
+# Check formatting
+make fmt-check
+
+# Run all CI checks
+make ci
+```
+
+### Go Version Requirement
+
+This library requires **Go 1.23+** (go.mod specifies 1.25 due to evcc dependencies, but works with 1.23).
+
+### CI/CD
+
+GitHub Actions runs:
+- **Tests** on Go 1.23 and stable
+- **Format checks** with `gofmt`
+- **Linting** with `golangci-lint`
+
 ## Related Projects
 
 - [evcc](https://github.com/evcc-io/evcc) - EV Charge Controller (uses this library)
