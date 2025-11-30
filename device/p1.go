@@ -1,4 +1,4 @@
-package homewizard
+package device
 
 import (
 	"encoding/json"
