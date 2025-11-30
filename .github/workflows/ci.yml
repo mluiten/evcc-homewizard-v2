@@ -30,7 +30,12 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: Run tests
+      - name: Run tests (without coverage for Go 1.23)
+        if: matrix.go-version == '1.23'
+        run: go test -v -race ./...
+
+      - name: Run tests (with coverage for stable)
+        if: matrix.go-version == 'stable'
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Upload coverage
