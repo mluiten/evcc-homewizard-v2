@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mluiten/evcc-homewizard-v2/device"
 	"github.com/libp2p/zeroconf/v2"
+	"github.com/mluiten/evcc-homewizard-v2/device"
 )
 
 // DiscoveredDevice represents a discovered HomeWizard device
