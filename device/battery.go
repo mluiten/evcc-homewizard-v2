@@ -82,3 +82,32 @@ func (d *BatteryDevice) GetMeasurement() (BatteryMeasurement, error) {
 func (d *BatteryDevice) DefaultCapacity() float64 {
 	return DefaultBatteryCapacity
 }
+
+// GetPower returns the battery power (inverted: negative = discharging, positive = charging)
+func (d *BatteryDevice) GetPower() (float64, error) {
+	m, err := d.GetMeasurement()
+	if err != nil {
+		return 0, err
+	}
+	// Invert the battery power, because HW reports negative = discharging and positive = charging
+	// evcc expects positive = discharging, negative = charging
+	return -m.PowerW, nil
+}
+
+// GetSoc returns the battery state of charge percentage
+func (d *BatteryDevice) GetSoc() (float64, error) {
+	m, err := d.GetMeasurement()
+	if err != nil {
+		return 0, err
+	}
+	return m.StateOfChargePct, nil
+}
+
+// GetTotalEnergy returns the total imported energy
+func (d *BatteryDevice) GetTotalEnergy() (float64, error) {
+	m, err := d.GetMeasurement()
+	if err != nil {
+		return 0, err
+	}
+	return m.EnergyImportkWh, nil
+}
