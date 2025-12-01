@@ -13,16 +13,16 @@ import (
 
 // P1MeterDevice represents a P1 meter (HWE-P1) with battery control
 type P1MeterDevice struct {
-	*baseMeterDevice
+	*baseMeterDevice[P1Measurement]
 	batteriesData *util.Monitor[BatteriesData]
 }
 
 // NewP1MeterDevice creates a new P1 meter device instance
 func NewP1MeterDevice(host, token string, timeout time.Duration) *P1MeterDevice {
 	d := &P1MeterDevice{
-		baseMeterDevice: &baseMeterDevice{
+		baseMeterDevice: &baseMeterDevice[P1Measurement]{
 			deviceBase:  newDeviceBase(DeviceTypeP1Meter, host, token, timeout),
-			measurement: util.NewMonitor[MeterMeasurement](timeout),
+			measurement: util.NewMonitor[P1Measurement](timeout),
 		},
 		batteriesData: util.NewMonitor[BatteriesData](timeout),
 	}
@@ -42,8 +42,6 @@ func (d *P1MeterDevice) handleP1Message(msgType string, data json.RawMessage) er
 			return fmt.Errorf("unmarshal batteries data: %w", err)
 		}
 		d.batteriesData.Set(b)
-		d.log.TRACE.Printf("updated batteries data: mode=%s, charge_limit=%.0fW, discharge_limit=%.0fW",
-			b.Mode, b.MaxConsumptionW, b.MaxProductionW)
 		return nil
 
 	default:

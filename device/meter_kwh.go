@@ -8,15 +8,15 @@ import (
 
 // KWHMeterDevice represents a kWh meter (HWE-KWH1, HWE-KWH3)
 type KWHMeterDevice struct {
-	*baseMeterDevice
+	*baseMeterDevice[KWHMeasurement]
 }
 
 // NewKWHMeterDevice creates a new kWh meter device instance
 func NewKWHMeterDevice(host, token string, timeout time.Duration) *KWHMeterDevice {
 	d := &KWHMeterDevice{
-		baseMeterDevice: &baseMeterDevice{
+		baseMeterDevice: &baseMeterDevice[KWHMeasurement]{
 			deviceBase:  newDeviceBase(DeviceTypeKWHMeter, host, token, timeout),
-			measurement: util.NewMonitor[MeterMeasurement](timeout),
+			measurement: util.NewMonitor[KWHMeasurement](timeout),
 		},
 	}
 
