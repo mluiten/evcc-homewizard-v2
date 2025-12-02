@@ -50,17 +50,37 @@ func (d *P1MeterDevice) handleP1Message(msgType string, data json.RawMessage) er
 	}
 }
 
-// GetTotalEnergy returns the total energy for P1 meters (sum of T1 and T2 tariffs)
-// For PV usage: returns export energy (production)
-// For grid usage: returns import energy (consumption)
-func (d *P1MeterDevice) GetTotalEnergy(usePVExport bool) (float64, error) {
+// GetPower returns the total power for P1 meters (always grid, never inverted)
+func (d *P1MeterDevice) GetPower() (float64, error) {
 	m, err := d.GetMeasurement()
 	if err != nil {
 		return 0, err
 	}
+	return m.GetCommon().PowerW, nil
+}
 
-	if usePVExport {
-		return m.EnergyExportT1kWh + m.EnergyExportT2kWh, nil
+// GetPhasePowers returns the per-phase powers for P1 meters (always grid, never inverted)
+// For 1-phase: returns (totalPower, 0, 0)
+// For 3-phase: returns (L1, L2, L3)
+func (d *P1MeterDevice) GetPhasePowers(phases int) (float64, float64, float64, error) {
+	m, err := d.GetMeasurement()
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	common := m.GetCommon()
+	if phases == 1 {
+		return common.PowerW, 0, 0, nil
+	}
+	return common.PowerL1W, common.PowerL2W, common.PowerL3W, nil
+}
+
+// GetTotalEnergy returns the total import energy for P1 meters (sum of T1 and T2 tariffs)
+// P1 meters are always grid meters, so we always return import energy
+func (d *P1MeterDevice) GetTotalEnergy() (float64, error) {
+	m, err := d.GetMeasurement()
+	if err != nil {
+		return 0, err
 	}
 	return m.EnergyImportT1kWh + m.EnergyImportT2kWh, nil
 }
