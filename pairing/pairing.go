@@ -41,14 +41,14 @@ func DiscoverAndPairDevices(name string, timeout int) error {
 	devices := discoverInteractively(timeout)
 
 	if len(devices) == 0 {
-		return fmt.Errorf("no HomeWizard devices found on network")
+		return fmt.Errorf("no HomeWizard devices found on network 😞")
 	}
 
 	fmt.Println()
 	fmt.Println("HomeWizard Device Pairing")
 	fmt.Println("=========================")
 	fmt.Println()
-	fmt.Println("Press the button on ALL devices NOW!")
+	fmt.Println("Press the button on your devices:")
 	fmt.Println()
 
 	// Pair all devices in parallel
@@ -68,20 +68,35 @@ func PairSingleDevice(host, name string) error {
 		return fmt.Errorf("invalid name: must be 1-40 characters (a-z, A-Z, 0-9, -, _, \\, /, #, spaces)")
 	}
 
+	host = strings.TrimPrefix(host, "http://")
+	host = strings.TrimPrefix(host, "https://")
+
 	fmt.Println("HomeWizard Device Pairing")
 	fmt.Println("=========================")
 	fmt.Println()
 	fmt.Printf("Device: %s\n", host)
 	fmt.Println()
-	fmt.Println("Press the button on your device NOW!")
+	fmt.Println("Press the button on your device:")
 	fmt.Println()
+	fmt.Println()
+
+	status := deviceStatus{
+		device: discovery.DiscoveredDevice{
+			Host: host,
+		},
+		status: "initializing...",
+	}
+
+	updateStatusLine(0, &status, 1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
 	// Pair the device
 	token, err := pairDeviceWithContext(ctx, host, name, func(attempt int) {
-		fmt.Printf("\rWaiting for button press (attempt %d/36)...", attempt)
+		status.attempt = attempt
+		status.status = fmt.Sprintf("waiting for button press (attempt %d/36)...", attempt)
+		updateStatusLine(0, &status, 1)
 	})
 
 	if err != nil {
@@ -315,7 +330,7 @@ func pairDeviceWithContext(ctx context.Context, host, name string, onAttempt fun
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
-		Timeout: 10 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 
 	ticker := time.NewTicker(5 * time.Second)
@@ -441,7 +456,8 @@ func printHomeWizardMultiConfig(devices []PairedDevice) {
 	// Print P1 meter (grid) configuration
 	if p1Meter != nil {
 		fmt.Println("- name: grid")
-		fmt.Println("  type: homewizard-p1")
+		fmt.Println("  type: homewizard-v2")
+		fmt.Println("  usage: grid")
 		fmt.Printf("  host: %s\n", p1Meter.Host)
 		fmt.Printf("  token: %s\n", p1Meter.Token)
 		fmt.Println()
@@ -454,7 +470,8 @@ func printHomeWizardMultiConfig(devices []PairedDevice) {
 			meterName = fmt.Sprintf("pv%d", i+1)
 		}
 		fmt.Printf("- name: %s\n", meterName)
-		fmt.Println("  type: homewizard-kwh")
+		fmt.Println("  type: homewizard-v2")
+		fmt.Println("  usage: pv    # or \"charge\", if you use it for something else")
 		fmt.Printf("  host: %s\n", kwh.Host)
 		fmt.Printf("  token: %s\n", kwh.Token)
 		fmt.Println()
@@ -467,27 +484,18 @@ func printHomeWizardMultiConfig(devices []PairedDevice) {
 			meterName = fmt.Sprintf("battery%d", i+1)
 		}
 		fmt.Printf("- name: %s\n", meterName)
-		fmt.Println("  type: homewizard-battery")
+		fmt.Println("  type: homewizard-v2")
+		fmt.Println("  usage: battery")
 		fmt.Printf("  host: %s\n", bat.Host)
 		fmt.Printf("  token: %s\n", bat.Token)
 
-		// Add controller configuration if P1 meter exists
-		if p1Meter != nil {
-			fmt.Println("  controller: grid  # Reference to the grid meter above")
-		} else {
-			fmt.Println("  # controller: grid  # Reference to the grid meter")
-		}
 		fmt.Println()
 	}
 
 	// Print helpful notes
 	if len(devices) > 0 {
 		fmt.Println("# Notes:")
-		fmt.Println("# - Each meter entry configures ONE device")
-		fmt.Println("# - homewizard-p1: P1 meter for grid monitoring")
-		fmt.Println("# - homewizard-kwh: kWh meter for PV monitoring")
-		fmt.Println("# - homewizard-battery: Battery device for SoC and power")
-		fmt.Println("# - Battery requires 'controller' parameter (name of the P1 meter)")
+		fmt.Println("# - Make sure to add these devices to your \"sites\" as well")
 		fmt.Println()
 	}
 }
